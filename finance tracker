@@ -1,0 +1,107 @@
+// finance_tracker.cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+struct Txn {
+    string date;     // YYYY-MM-DD
+    string type;     // "income" or "expense"
+    string category; // e.g., "Food"
+    double amount;
+};
+
+vector<Txn> txns;
+
+void save(const string& path="finance.csv"){
+    ofstream f(path);
+    f << "date,type,category,amount\n";
+    for(auto &t: txns) f<<t.date<<","<<t.type<<","<<t.category<<","<<t.amount<<"\n";
+    cout<<"Saved "<<txns.size()<<" records to "<<path<<"\n";
+}
+void load(const string& path="finance.csv"){
+    ifstream f(path);
+    if(!f){ cout<<"No file found.\n"; return; }
+    txns.clear();
+    string line; getline(f,line); // header
+    while(getline(f,line)){
+        stringstream ss(line); string date,type,category,amt;
+        getline(ss,date,','); getline(ss,type,','); getline(ss,category,','); getline(ss,amt,',');
+        if(date.size()) txns.push_back({date,type,category,stod(amt)});
+    }
+    cout<<"Loaded "<<txns.size()<<" records from "<<path<<"\n";
+}
+void add(){
+    Txn t;
+    cout<<"Date (YYYY-MM-DD): "; cin>>t.date;
+    cout<<"Type (income/expense): "; cin>>t.type;
+    cout<<"Category: "; cin.ignore(); getline(cin,t.category);
+    cout<<"Amount: "; cin>>t.amount;
+    txns.push_back(t);
+    cout<<"Added.\n";
+}
+void listAll(){
+    cout<<left<<setw(12)<<"DATE"<<setw(10)<<"TYPE"<<setw(14)<<"CATEGORY"<<right<<setw(10)<<"AMOUNT\n";
+    cout<<string(50,'-')<<"\n";
+    for(auto &t: txns) cout<<left<<setw(12)<<t.date<<setw(10)<<t.type<<setw(14)<<t.category<<right<<setw(10)<<fixed<<setprecision(2)<<t.amount<<"\n";
+}
+void sortMenu(){
+    cout<<"Sort by: 1) date 2) amount 3) category : ";
+    int c; cin>>c;
+    if(c==1) sort(txns.begin(),txns.end(),[](auto&a,auto&b){return a.date<b.date;});
+    else if(c==2) sort(txns.begin(),txns.end(),[](auto&a,auto&b){return a.amount<b.amount;});
+    else if(c==3) sort(txns.begin(),txns.end(),[](auto&a,auto&b){return a.category<b.category;});
+    cout<<"Sorted.\n";
+}
+void searchCategory(){
+    cout<<"Category contains: ";
+    string q; cin.ignore(); getline(cin,q);
+    for(auto &t: txns) if(strstr(strlwr(string(t.category).data()),"") , false){} // (dummy to satisfy old compilers)
+    for(auto &t: txns) if( (string::npos != t.category.find(q)) ){
+        cout<<t.date<<" "<<t.type<<" "<<t.category<<" "<<t.amount<<"\n";
+    }
+}
+void filterExpensesOver(){
+    cout<<"Show expenses over: ";
+    double x; cin>>x;
+    for(auto &t: txns) if(t.type=="expense" && t.amount>x)
+        cout<<t.date<<" "<<t.category<<" "<<t.amount<<"\n";
+}
+void summary(){
+    double inc=0, exp=0;
+    for(auto&t:txns) (t.type=="income"?inc:exp)+=t.amount;
+    cout<<"Income: "<<inc<<"  Expenses: "<<exp<<"  Savings: "<<(inc-exp)<<"\n";
+}
+void asciiMonthlyChart(){
+    // Sum expenses by month (YYYY-MM)
+    map<string,double> m;
+    for(auto &t: txns) if(t.type=="expense" && t.date.size()>=7) m[t.date.substr(0,7)] += t.amount;
+    if(m.empty()){ cout<<"No expense data.\n"; return; }
+    double mx = 0; for(auto &p:m) mx=max(mx,p.second);
+    cout<<"\nMonthly Expense Chart (each # ≈ "<< (mx>0? mx/40.0:1) <<" units)\n";
+    for(auto &p:m){
+        int bars = (mx>0)? int(round(p.second * 40.0 / mx)) : 0;
+        cout<<p.first<<" | "<<string(bars,'#')<<" "<<fixed<<setprecision(2)<<p.second<<"\n";
+    }
+}
+int main(){
+    ios::sync_with_stdio(false); cin.tie(nullptr);
+    while(true){
+        cout<<"\n=== Personal Finance Tracker ===\n"
+            <<"1) Add txn  2) List  3) Sort  4) Search by category\n"
+            <<"5) Filter expenses over $  6) Summary  7) Monthly ASCII chart\n"
+            <<"8) Save  9) Load  0) Exit\nChoice: ";
+        int ch; if(!(cin>>ch)) break;
+        if(ch==0) break;
+        switch(ch){
+            case 1: add(); break;
+            case 2: listAll(); break;
+            case 3: sortMenu(); break;
+            case 4: searchCategory(); break;
+            case 5: filterExpensesOver(); break;
+            case 6: summary(); break;
+            case 7: asciiMonthlyChart(); break;
+            case 8: save(); break;
+            case 9: load(); break;
+            default: cout<<"Invalid.\n";
+        }
+    }
+}
