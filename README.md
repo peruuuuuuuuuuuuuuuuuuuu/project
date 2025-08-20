@@ -1,4 +1,4 @@
-C++ Mini-Projects Collection
+C++ Mini-Projects Collection ..
 
 This repository contains a collection of Python command-line projects, each designed to demonstrate fundamental programming concepts and the use of core data structures.
 
