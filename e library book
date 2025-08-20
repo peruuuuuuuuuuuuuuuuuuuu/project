@@ -1,0 +1,108 @@
+// elibrary_undo.cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+struct Book {
+    int id; string title, author; int copies;
+    Book* next;
+    Book(int i,string t,string a,int c):id(i),title(move(t)),author(move(a)),copies(c),next(nullptr){}
+};
+
+struct Action { // record last operation to undo
+    // type: "add","remove","borrow","return","addcopy","remcopy"
+    string type; int id; int delta; string title, author;
+};
+
+Book* head=nullptr;
+stack<Action> undoSt;
+
+Book* findById(int id){ for(Book* p=head;p;p=p->next) if(p->id==id) return p; return nullptr; }
+
+void addBook(){
+    int id,c; string t,a;
+    cout<<"ID: "; cin>>id; cin.ignore();
+    cout<<"Title: "; getline(cin,t);
+    cout<<"Author: "; getline(cin,a);
+    cout<<"Copies: "; cin>>c;
+    Book* b=new Book(id,t,a,c);
+    b->next=head; head=b;
+    undoSt.push({"remove",id,0,t,a});
+    cout<<"Added.\n";
+}
+void removeBook(){
+    int id; cout<<"ID to remove: "; cin>>id;
+    Book **pp=&head, *p=head;
+    while(p && p->id!=id){ pp=&p->next; p=p->next; }
+    if(!p){ cout<<"Not found.\n"; return; }
+    *pp=p->next;
+    undoSt.push({"add",p->id,p->copies,p->title,p->author});
+    delete p;
+    cout<<"Removed.\n";
+}
+void listAll(){
+    cout<<left<<setw(6)<<"ID"<<setw(25)<<"TITLE"<<setw(18)<<"AUTHOR"<<right<<setw(8)<<"COPIES\n";
+    cout<<string(60,'-')<<"\n";
+    for(Book* p=head;p;p=p->next)
+        cout<<left<<setw(6)<<p->id<<setw(25)<<p->title.substr(0,24)<<setw(18)<<p->author.substr(0,17)
+            <<right<<setw(8)<<p->copies<<"\n";
+}
+void search(){
+    cin.ignore();
+    cout<<"Search title/author contains: ";
+    string q; getline(cin,q);
+    for(Book* p=head;p;p=p->next){
+        if(p->title.find(q)!=string::npos || p->author.find(q)!=string::npos)
+            cout<<p->id<<" | "<<p->title<<" | "<<p->author<<" | "<<p->copies<<"\n";
+    }
+}
+void borrowBook(){
+    int id; cout<<"Borrow book ID: "; cin>>id;
+    Book* b=findById(id); if(!b){ cout<<"Not found.\n"; return; }
+    if(b->copies<=0){ cout<<"None available.\n"; return; }
+    b->copies--; undoSt.push({"return",id,1,"",""});
+    cout<<"Borrowed.\n";
+}
+void returnBook(){
+    int id; cout<<"Return book ID: "; cin>>id;
+    Book* b=findById(id); if(!b){ cout<<"Not found.\n"; return; }
+    b->copies++; undoSt.push({"borrow",id,1,"",""});
+    cout<<"Returned.\n";
+}
+void undo(){
+    if(undoSt.empty()){ cout<<"Nothing to undo.\n"; return; }
+    auto a=undoSt.top(); undoSt.pop();
+    if(a.type=="remove"){ // undo add => remove node with id
+        // remove the just-added book
+        Book **pp=&head, *p=head;
+        while(p && p->id!=a.id){ pp=&p->next; p=p->next; }
+        if(p){ *pp=p->next; delete p; cout<<"Undo: removed added book.\n"; }
+    }else if(a.type=="add"){ // undo remove => re-add
+        Book* b=new Book(a.id,a.title,a.author,a.delta);
+        b->next=head; head=b;
+        cout<<"Undo: restored removed book.\n";
+    }else if(a.type=="return"){ // undo borrow => increment copies
+        Book* b=findById(a.id); if(b){ b->copies++; cout<<"Undo: borrow reverted.\n"; }
+    }else if(a.type=="borrow"){ // undo return => decrement copies (if >0)
+        Book* b=findById(a.id); if(b && b->copies>0){ b->copies--; cout<<"Undo: return reverted.\n"; }
+    }else{
+        cout<<"Unknown action.\n";
+    }
+}
+int main(){
+    ios::sync_with_stdio(false); cin.tie(nullptr);
+    while(true){
+        cout<<"\n=== E-Library ===\n"
+            <<"1) Add  2) Remove  3) List  4) Search  5) Borrow  6) Return  7) Undo  0) Exit\nChoice: ";
+        int c; if(!(cin>>c)) break; if(c==0) break;
+        switch(c){
+            case 1: addBook(); break;
+            case 2: removeBook(); break;
+            case 3: listAll(); break;
+            case 4: search(); break;
+            case 5: borrowBook(); break;
+            case 6: returnBook(); break;
+            case 7: undo(); break;
+            default: cout<<"Invalid.\n";
+        }
+    }
+}
