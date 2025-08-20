@@ -1,0 +1,98 @@
+// expression_calculator.cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+int prec(char op){
+    if(op=='^') return 3;
+    if(op=='*'||op=='/'||op=='%') return 2;
+    if(op=='+'||op=='-') return 1;
+    return 0;
+}
+bool isOp(char c){ return c=='+'||c=='-'||c=='*'||c=='/'||c=='%'||c=='^'; }
+
+vector<string> tokenize(const string& s){
+    vector<string> t; string num;
+    for(size_t i=0;i<s.size();++i){
+        char c=s[i]; if(isspace(c)) continue;
+        if(isdigit(c) || c=='.'){ num+=c; }
+        else{
+            if(!num.empty()){ t.push_back(num); num.clear(); }
+            if(isOp(c) || c=='(' || c==')') t.push_back(string(1,c));
+            else { cerr<<"Invalid char: "<<c<<"\n"; }
+        }
+    }
+    if(!num.empty()) t.push_back(num);
+    return t;
+}
+vector<string> infixToPostfix(const vector<string>& in){
+    vector<string> out; stack<string> st;
+    for(size_t i=0;i<in.size();++i){
+        const string &x=in[i];
+        if(x=="(") st.push(x);
+        else if(x==")"){
+            while(!st.empty() && st.top()!="("){ out.push_back(st.top()); st.pop(); }
+            if(!st.empty()) st.pop();
+        }else if(x.size()==1 && isOp(x[0])){
+            char op=x[0];
+            while(!st.empty()){
+                string top=st.top();
+                if(top.size()==1 && isOp(top[0])){
+                    char op2=top[0];
+                    bool rightAssoc = (op=='^');
+                    if( (prec(op2)>prec(op)) || (!rightAssoc && prec(op2)==prec(op)) ){
+                        out.push_back(top); st.pop(); continue;
+                    }
+                }
+                break;
+            }
+            st.push(x);
+        }else{ // number
+            out.push_back(x);
+        }
+    }
+    while(!st.empty()){ out.push_back(st.top()); st.pop(); }
+    return out;
+}
+double apply(double a,double b,char op){
+    switch(op){
+        case '+': return a+b;
+        case '-': return a-b;
+        case '*': return a*b;
+        case '/': if(b==0) throw runtime_error("Divide by zero"); return a/b;
+        case '%': return fmod(a,b);
+        case '^': return pow(a,b);
+    }
+    throw runtime_error("Unknown op");
+}
+double evalPostfix(const vector<string>& pf){
+    stack<double> st;
+    for(auto &x: pf){
+        if(x.size()==1 && isOp(x[0])){
+            if(st.size()<2) throw runtime_error("Malformed expr");
+            double b=st.top(); st.pop();
+            double a=st.top(); st.pop();
+            st.push(apply(a,b,x[0]));
+        }else{
+            st.push(stod(x));
+        }
+    }
+    if(st.size()!=1) throw runtime_error("Malformed expr");
+    return st.top();
+}
+int main(){
+    ios::sync_with_stdio(false); cin.tie(nullptr);
+    cout<<"Enter infix expression (supports + - * / % ^ and parentheses). Example: (3+4)*2^3\n> ";
+    string line; getline(cin,line);
+    if(line.empty()) getline(cin,line);
+    auto toks = tokenize(line);
+    auto pf = infixToPostfix(toks);
+    cout<<"Postfix: ";
+    for(auto &s: pf) cout<<s<<' ';
+    cout<<"\n";
+    try{
+        double ans = evalPostfix(pf);
+        cout<<"Result: "<<fixed<<setprecision(6)<<ans<<"\n";
+    }catch(exception& e){
+        cout<<"Error: "<<e.what()<<"\n";
+    }
+}
